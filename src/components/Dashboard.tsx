@@ -48,7 +48,13 @@ export function Dashboard() {
       const [listingsData, membersData, requestsData] = await Promise.all([
         listingService.getCommunityListings(selectedCommunity.id),
         communityService.getCommunityMembers(selectedCommunity.id),
-        barterService.getUserBarterRequests(user!.id)
+        Promise.all([
+          barterService.getMyRequests(user!.id),
+          barterService.getRequestsForMyListings(user!.id)
+        ]).then(([myRequests, requestsForMyListings]) => [
+          ...myRequests,
+          ...requestsForMyListings
+        ])
       ]);
       
       setListings(listingsData);
