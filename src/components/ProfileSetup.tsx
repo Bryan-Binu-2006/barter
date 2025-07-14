@@ -25,6 +25,14 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim() || 
+        !formData.city.trim() || !formData.state.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
     if (!user) return;
 
     setLoading(true);
@@ -32,12 +40,15 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
 
     try {
       await profileService.completeProfile(user.id, formData);
+      
+      // Only call onComplete when all steps are truly finished
+      if (currentStep === 2) {
+        setTimeout(() => {
+          onComplete();
+        }, 1000);
+      }
       onComplete();
     } catch (err: any) {
-      setError(err.message || 'Failed to complete profile');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

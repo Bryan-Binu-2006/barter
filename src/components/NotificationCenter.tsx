@@ -1,14 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Check, MessageCircle, Package, AlertCircle } from 'lucide-react';
 import { notificationService, Notification } from '../services/notificationService';
+import { useAuth } from '../contexts/AuthContext';
 
-interface NotificationCenterProps {
-  onClose: () => void;
-}
-
-export function NotificationCenter({ onClose }: NotificationCenterProps) {
+export function NotificationCenter() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     loadNotifications();
@@ -29,8 +43,6 @@ export function NotificationCenter({ onClose }: NotificationCenterProps) {
       setNotifications(data);
     } catch (error) {
       console.error('Error loading notifications:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -69,99 +81,93 @@ export function NotificationCenter({ onClose }: NotificationCenterProps) {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Bell size={24} className="text-gray-700" />
-              <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
-              {unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllAsRead}
-              className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
-            >
-              Mark all as read
-            </button>
-          )}
-        </div>
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-md"
+      >
+        <Bell className="w-6 h-6" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
 
-        <div className="overflow-y-auto max-h-96">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading notifications...</p>
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="p-8 text-center">
-              <Bell className="mx-auto text-gray-400 mb-4" size={48} />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-              <p className="text-gray-600">You're all caught up!</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 hover:bg-gray-50 transition-colors ${
-                    !notification.isRead ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                  }`}
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 max-h-96 overflow-y-auto">
+          <div className="py-1">
+            <div className="px-4 py-2 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-medium text-gray-900">Notifications</h3>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className={`text-sm font-medium ${
-                            !notification.isRead ? 'text-gray-900' : 'text-gray-700'
-                          }`}>
-                            {notification.title}
-                          </h4>
-                          <p className={`text-sm mt-1 ${
-                            !notification.isRead ? 'text-gray-700' : 'text-gray-600'
-                          }`}>
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            {new Date(notification.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                        {!notification.isRead && (
-                          <button
-                            onClick={() => handleMarkAsRead(notification.id)}
-                            className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                            title="Mark as read"
-                          >
-                            <Check size={16} />
-                          </button>
-                        )}
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            {notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <Bell className="mx-auto text-gray-400 mb-2" size={24} />
+                <p className="text-sm text-gray-500">No notifications</p>
+              </div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                      !notification.isRead ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {getNotificationIcon(notification.type)}
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${
+                          !notification.isRead ? 'font-medium text-gray-900' : 'text-gray-700'
+                        }`}>
+                          {notification.title}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(notification.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      {!notification.isRead && (
+                        <button
+                          onClick={() => handleMarkAsRead(notification.id)}
+                          className="flex-shrink-0 text-blue-600 hover:text-blue-800"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+            
+            {unreadCount > 0 && (
+              <div className="px-4 py-2 border-t border-gray-200">
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Mark all as read
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
