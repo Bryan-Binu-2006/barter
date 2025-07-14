@@ -68,27 +68,33 @@ class BarterService {
     return request;
   }
 
-  async getMyRequests(): Promise<BarterRequest[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+  // Get requests made by the user
+  getMyRequests: (userId: string): Promise<BarterRequest[]> => {
+    const requests = LocalStorageManager.get<BarterRequest[]>('barterRequests', []);
+    return Promise.resolve(
+      requests
+        .filter(request => request.requesterId === userId)
+        .map(request => ({
+          ...request,
+          listingTitle: LocalStorageManager.get<Listing[]>('listings', [])
+            .find(l => l.id === request.listingId)?.title || 'Unknown Listing'
+        }))
+    );
+  },
 
-    const currentUser = LocalStorageManager.getCurrentUser();
-    if (!currentUser) throw new Error('Not authenticated');
-
-    const requests = LocalStorageManager.getBarterRequests();
-    return requests.filter((r: BarterRequest) => r.requesterId === currentUser.id);
-  }
-
-  async getRequestsForMyListings(): Promise<BarterRequest[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    const currentUser = LocalStorageManager.getCurrentUser();
-    if (!currentUser) throw new Error('Not authenticated');
-
-    const requests = LocalStorageManager.getBarterRequests();
-    return requests.filter((r: BarterRequest) => r.ownerId === currentUser.id);
-  }
+  // Get requests for user's listings
+  getRequestsForMyListings: (userId: string): Promise<BarterRequest[]> => {
+    const requests = LocalStorageManager.get<BarterRequest[]>('barterRequests', []);
+    return Promise.resolve(
+      requests
+        .filter(request => request.ownerId === userId)
+        .map(request => ({
+          ...request,
+          listingTitle: LocalStorageManager.get<Listing[]>('listings', [])
+            .find(l => l.id === request.listingId)?.title || 'Unknown Listing'
+        }))
+    );
+  },
 
   async respondToRequest(requestId: string, accept: boolean): Promise<BarterRequest> {
     // Simulate API delay
