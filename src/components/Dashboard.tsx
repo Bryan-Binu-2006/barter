@@ -9,6 +9,7 @@ import { CreateListing } from './CreateListing';
 import { BarterRequestModal } from './BarterRequestModal';
 import { BarterRequest } from '../types/barter';
 import { BarterConfirmationModal } from './BarterConfirmationModal';
+import { BarterChatModal } from './BarterChatModal';
 import { TrustScoreDisplay } from './TrustScoreDisplay';
 
 interface Listing {
@@ -59,6 +60,7 @@ export function Dashboard() {
   const [showBarterModal, setShowBarterModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<BarterRequest | null>(null);
+  const [showChatModal, setShowChatModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -139,8 +141,10 @@ export function Dashboard() {
   };
 
   const handleConfirmBarter = (request: BarterRequest) => {
-    setSelectedRequest(request);
-    setShowConfirmationModal(true);
+    if (request.status === 'both_accepted') {
+      setSelectedRequest(request);
+      setShowChatModal(true);
+    }
   };
 
   const filteredListings = listings.filter(listing => {
@@ -645,11 +649,13 @@ export function Dashboard() {
                     )}
 
                     {request.status === 'both_accepted' && request.confirmationCode && (
+                    {request.status === 'both_accepted' && (
                       <button
                         onClick={() => handleConfirmBarter(request)}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-1"
                       >
-                        Complete Barter
+                        <MessageCircle size={14} />
+                        <span>Open Chat</span>
                       </button>
                     )}
 
@@ -668,13 +674,16 @@ export function Dashboard() {
                 </div>
 
                 {request.confirmationCode && (
+                {(request.ownerConfirmationCode || request.requesterConfirmationCode) && (
                   <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
                     <p className="text-sm text-emerald-800">
-                      <strong>Confirmation Code:</strong> 
-                      <span className="font-mono ml-2">{request.confirmationCode}</span>
+                      <strong>Your Confirmation Code:</strong> 
+                      <span className="font-mono ml-2">
+                        {user?.id === request.ownerId ? request.ownerConfirmationCode : request.requesterConfirmationCode}
+                      </span>
                     </p>
                     <p className="text-xs text-emerald-600 mt-1">
-                      Use this code when meeting to complete the barter
+                      Share this code with the other party when meeting to exchange items
                     </p>
                   </div>
                 )}
@@ -816,6 +825,17 @@ export function Dashboard() {
           onClose={() => setShowConfirmationModal(false)}
           onSuccess={() => {
             setShowConfirmationModal(false);
+            loadBarterRequests();
+          }}
+        />
+      )}
+
+      {showChatModal && selectedRequest && (
+        <BarterChatModal
+          request={selectedRequest}
+          onClose={() => setShowChatModal(false)}
+          onComplete={() => {
+            setShowChatModal(false);
             loadBarterRequests();
           }}
         />

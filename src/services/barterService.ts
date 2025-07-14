@@ -145,14 +145,16 @@ class BarterService {
       if (accept) {
         updatedRequest.requesterAccepted = true;
         updatedRequest.status = 'both_accepted';
-        updatedRequest.confirmationCode = this.generateConfirmationCode();
+        // Generate separate confirmation codes for each party
+        updatedRequest.ownerConfirmationCode = this.generateConfirmationCode();
+        updatedRequest.requesterConfirmationCode = this.generateConfirmationCode();
         updatedRequest.updatedAt = new Date().toISOString();
         
         // Notify both parties
         const notificationForOwner = {
           id: this.generateId(),
-          title: 'Barter Confirmed!',
-          message: `${currentUser.name} confirmed the barter for "${request.listing.title}". Confirmation code generated!`,
+          title: 'Barter Confirmed - Chat Available!',
+          message: `${currentUser.name} confirmed the barter for "${request.listing.title}". You can now chat privately to arrange the exchange!`,
           type: 'barter_both_accepted',
           relatedId: requestId,
           isRead: false,
@@ -161,8 +163,8 @@ class BarterService {
         
         const notificationForRequester = {
           id: this.generateId(),
-          title: 'Barter Confirmed!',
-          message: `You confirmed the barter for "${request.listing.title}". Use the confirmation code when meeting!`,
+          title: 'Barter Confirmed - Chat Available!',
+          message: `You confirmed the barter for "${request.listing.title}". You can now chat privately to arrange the exchange!`,
           type: 'barter_both_accepted',
           relatedId: requestId,
           isRead: false,
@@ -171,14 +173,6 @@ class BarterService {
         
         LocalStorageManager.addNotification(request.ownerId, notificationForOwner);
         LocalStorageManager.addNotification(request.requesterId, notificationForRequester);
-        
-        // Mark listing as inactive
-        const listings = LocalStorageManager.getListings();
-        const listingIndex = listings.findIndex((l: any) => l.id === request.listingId);
-        if (listingIndex !== -1) {
-          listings[listingIndex].isActive = false;
-          LocalStorageManager.setListings(listings);
-        }
       } else {
         updatedRequest.status = 'rejected';
         updatedRequest.updatedAt = new Date().toISOString();
@@ -212,27 +206,54 @@ class BarterService {
     if (!currentUser) throw new Error('Not authenticated');
 
     const requests = LocalStorageManager.getBarterRequests();
-    const requestIndex = requests.findIndex((r: BarterRequest) => 
-      r.id === requestId && 
-      r.confirmationCode === confirmationCode &&
-      (r.requesterId === currentUser.id || r.ownerId === currentUser.id)
-    );
+    const requestIndex = requests.findIndex((r: BarterRequest) => r.id === requestId);
 
     if (requestIndex === -1) {
-      throw new Error('Invalid confirmation code or request not found');
+      throw new Error('Request not found');
     }
 
     const request = requests[requestIndex];
-    requests[requestIndex] = {
-      ...request,
-      status: 'completed',
-      completedAt: new Date().toISOString()
-    };
+    
+    // Check if the confirmation code matches the user's specific code
+    const isOwner = request.ownerId === currentUser.id;
+    const isRequester = request.requesterId === currentUser.id;
+    
+    if (!isOwner && !isRequester) {
+      throw new Error('You are not part of this barter');
+    }
 
+    const expectedCode = isOwner ? request.ownerConfirmationCode : request.requesterConfirmationCode;
+    
+    if (expectedCode !== confirmationCode) {
+      throw new Error('Invalid confirmation code');
+    }
+
+    // Mark this user as having completed their part
+    if (isOwner) {
+      request.ownerCompleted = true;
+    } else {
+      request.requesterCompleted = true;
+    }
+
+    // If both parties have completed, mark the entire barter as completed
+    if (request.ownerCompleted && request.requesterCompleted) {
+      request.status = 'completed';
+      request.completedAt = new Date().toISOString();
+      
+      // Mark listing as inactive
+      const listings = LocalStorageManager.getListings();
+      const listingIndex = listings.findIndex((l: any) => l.id === request.listingId);
+      if (listingIndex !== -1) {
+        listings[listingIndex].isActive = false;
+        LocalStorageManager.setListings(listings);
+      }
+
+      // Update trust scores for both users
+      await this.updateTrustScoresAfterCompletion(request.ownerId, request.requesterId);
+    }
+
+    requests[requestIndex] = request;
     LocalStorageManager.setBarterRequests(requests);
-
-    // Update trust scores for both users
-    await this.updateTrustScoresAfterCompletion(request.ownerId, request.requesterId);
 
     return requests[requestIndex];
   }
@@ -271,9 +292,23 @@ class BarterService {
     await new Promise(resolve => setTimeout(resolve, 100));
     const currentUser = LocalStorageManager.getCurrentUser();
     if (!currentUser) throw new Error('Not authenticated');
+    
     const requests = LocalStorageManager.getBarterRequests();
     const requestIndex = requests.findIndex((r: BarterRequest) => r.id === requestId);
     if (requestIndex === -1) throw new Error('Request not found');
+    
+    const request = requests[requestIndex];
+    
+    // Only allow chat if both parties have accepted
+    if (request.status !== 'both_accepted' && request.status !== 'completed') {
+      throw new Error('Chat is only available after both parties accept the barter');
+    }
+    
+    // Only allow the owner and requester to chat
+    if (currentUser.id !== request.ownerId && currentUser.id !== request.requesterId) {
+      throw new Error('You are not authorized to chat in this barter');
+    }
+    
     const message = {
       id: this.generateId(),
       senderId: currentUser.id,
@@ -281,9 +316,11 @@ class BarterService {
       content,
       timestamp: new Date().toISOString()
     };
+    
     requests[requestIndex].chatMessages = requests[requestIndex].chatMessages || [];
     requests[requestIndex].chatMessages.push(message);
     LocalStorageManager.setBarterRequests(requests);
+    
     return requests[requestIndex];
   }
 }

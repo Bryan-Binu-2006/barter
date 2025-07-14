@@ -47,7 +47,7 @@ class TrustScoreService {
       disputes: 0,
       endorsements: 0,
       verifications: { email: true, phone: false, id: false, address: false }, // Email verified by default
-      behaviorScore: 0.8,
+      behaviorScore: 0.9, // Start higher for new users
       lastLogin: new Date().toISOString(),
       responseRate: 1.0,
       ruleViolations: 0
@@ -72,7 +72,7 @@ class TrustScoreService {
   }
 
   private calculateReputationScore(totalRating: number, ratingCount: number): number {
-    if (ratingCount === 0) return 0.5; // Neutral score for new users
+    if (ratingCount === 0) return 0.8; // Higher neutral score for new users (80%)
     return (totalRating / ratingCount) / 5.0;
   }
 
@@ -89,11 +89,11 @@ class TrustScoreService {
     // Response rate component (0-1)
     const responseComponent = Math.max(0, Math.min(1, responseRate));
     
-    // Rule adherence component (0-1)
-    const ruleAdherenceComponent = Math.max(0, 1 - (ruleViolations * 0.1));
+    // Rule adherence component (0-1) - less punishing
+    const ruleAdherenceComponent = Math.max(0.5, 1 - (ruleViolations * 0.05)); // Reduced penalty
     
     // Activity component (0-1) - based on completed exchanges
-    const activityComponent = Math.min(1, completedExchanges / 10);
+    const activityComponent = Math.min(1, completedExchanges / 5); // Easier to achieve
     
     return (responseComponent + ruleAdherenceComponent + activityComponent) / 3;
   }

@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, ArrowLeft, Bell } from 'lucide-react';
+import { LogOut, ArrowLeft, Bell, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCommunity } from '../contexts/CommunityContext';
 import { notificationService } from '../services/notificationService';
 import { NotificationCenter } from './NotificationCenter';
 import { BarterRequestsModal } from './BarterRequestsModal';
+import { ProfileModal } from './ProfileModal';
 
 export function Navigation() {
   const { user, logout } = useAuth();
   const { selectedCommunity, selectCommunity } = useCommunity();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -88,6 +90,15 @@ export function Navigation() {
                     )}
                   </button>
 
+                  {/* Profile Button */}
+                  <button
+                    onClick={() => setShowProfile(true)}
+                    className="p-2 text-gray-600 hover:text-emerald-600 transition-colors"
+                    title="Edit Profile"
+                  >
+                    <User size={20} />
+                  </button>
+
                   {/* User Info */}
                   <div className="hidden md:flex items-center space-x-2">
                     <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
@@ -124,6 +135,10 @@ export function Navigation() {
           onClose={() => setShowRequests(false)}
           onOpenChat={() => {}} // Removed chat functionality
         />
+      )}
+
+      {showProfile && (
+        <ProfileModal onClose={() => setShowProfile(false)} />
       )}
     </>
   );

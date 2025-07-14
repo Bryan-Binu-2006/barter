@@ -3,28 +3,46 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CommunityProvider } from './contexts/CommunityContext';
 import { Navigation } from './components/Navigation';
 import { AuthForm } from './components/AuthForm';
+import { ProfileSetup } from './components/ProfileSetup';
 import { CommunitySelector } from './components/CommunitySelector';
 import { Dashboard } from './components/Dashboard';
 import { useAuth } from './contexts/AuthContext';
 import { useCommunity } from './contexts/CommunityContext';
+import { profileService } from './services/profileService';
 
 function AppContent() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { selectedCommunity } = useCommunity();
-  const [currentView, setCurrentView] = useState<'auth' | 'community' | 'dashboard'>('auth');
+  const [currentView, setCurrentView] = useState<'auth' | 'profile' | 'community' | 'dashboard'>('auth');
+  const [profileComplete, setProfileComplete] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
+    const checkProfileStatus = async () => {
+      if (authLoading) return;
+      
+      if (!isAuthenticated) {
+        setCurrentView('auth');
+      } else if (user) {
+        const isComplete = await profileService.isProfileComplete(user.id);
+        setProfileComplete(isComplete);
+        
+        if (!isComplete) {
+          setCurrentView('profile');
+        } else if (!selectedCommunity) {
+          setCurrentView('community');
+        } else {
+          setCurrentView('dashboard');
+        }
+      }
+    };
     
-    if (!isAuthenticated) {
-      setCurrentView('auth');
-    } else if (!selectedCommunity) {
-      setCurrentView('community');
-    } else {
-      setCurrentView('dashboard');
-    }
-  }, [isAuthenticated, selectedCommunity, authLoading]);
+    checkProfileStatus();
+  }, [isAuthenticated, selectedCommunity, authLoading, user]);
 
+  const handleProfileComplete = () => {
+    setProfileComplete(true);
+    setCurrentView('community');
+  };
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex items-center justify-center">
@@ -45,6 +63,7 @@ function AppContent() {
       
       <main className="container mx-auto px-4 py-8">
         {currentView === 'auth' && <AuthForm />}
+        {currentView === 'profile' && <ProfileSetup onComplete={handleProfileComplete} />}
         {currentView === 'community' && <CommunitySelector />}
         {currentView === 'dashboard' && <Dashboard />}
       </main>

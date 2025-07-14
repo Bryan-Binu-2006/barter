@@ -7,7 +7,10 @@ export interface BarterRequest {
   ownerName: string;
   offerDescription: string;
   status: 'pending' | 'owner_accepted' | 'both_accepted' | 'rejected' | 'completed' | 'negotiating';
-  confirmationCode?: string;
+  ownerConfirmationCode?: string;
+  requesterConfirmationCode?: string;
+  ownerCompleted?: boolean;
+  requesterCompleted?: boolean;
   createdAt: string;
   updatedAt?: string;
   completedAt?: string;
@@ -32,4 +35,4 @@ export interface BarterRequest {
 export interface CreateBarterRequestData {
   listingId: string;
   offerDescription: string;
-} 
+}
