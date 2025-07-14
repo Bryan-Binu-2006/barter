@@ -49,6 +49,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
       }
       onComplete();
     } catch (err: any) {
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
