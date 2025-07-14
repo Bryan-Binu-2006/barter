@@ -19,7 +19,7 @@ import { Plus, Users, MessageSquare, Star, Clock, CheckCircle, XCircle, MessageC
 
 export function Dashboard() {
   const { user } = useAuth();
-  const { currentCommunity } = useCommunity();
+  const { selectedCommunity } = useCommunity();
   const [activeTab, setActiveTab] = useState<'listings' | 'members' | 'chat'>('listings');
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [showBarterRequest, setShowBarterRequest] = useState(false);
@@ -35,19 +35,19 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCommunity) {
+    if (selectedCommunity) {
       loadData();
     }
-  }, [currentCommunity]);
+  }, [selectedCommunity]);
 
   const loadData = async () => {
-    if (!currentCommunity) return;
+    if (!selectedCommunity) return;
     
     setLoading(true);
     try {
       const [listingsData, membersData, requestsData] = await Promise.all([
-        listingService.getCommunityListings(currentCommunity.id),
-        communityService.getCommunityMembers(currentCommunity.id),
+        listingService.getCommunityListings(selectedCommunity.id),
+        communityService.getCommunityMembers(selectedCommunity.id),
         barterService.getUserBarterRequests(user!.id)
       ]);
       
@@ -66,7 +66,7 @@ export function Dashboard() {
       await listingService.createListing({
         ...listingData,
         userId: user!.id,
-        communityId: currentCommunity!.id
+        communityId: selectedCommunity!.id
       });
       setShowCreateListing(false);
       loadData();
@@ -198,7 +198,7 @@ export function Dashboard() {
     }
   };
 
-  if (!currentCommunity) {
+  if (!selectedCommunity) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500">Please select a community to continue.</p>
@@ -218,9 +218,9 @@ export function Dashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {currentCommunity.name} Dashboard
+          {selectedCommunity.name} Dashboard
         </h1>
-        <p className="text-gray-600">{currentCommunity.description}</p>
+        <p className="text-gray-600">{selectedCommunity.description}</p>
       </div>
 
       <NotificationCenter />
