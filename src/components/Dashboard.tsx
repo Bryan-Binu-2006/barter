@@ -9,6 +9,7 @@ import { CreateListing } from './CreateListing';
 import { BarterRequestModal } from './BarterRequestModal';
 import { BarterRequest } from '../types/barter';
 import { BarterConfirmationModal } from './BarterConfirmationModal';
+import { TrustScoreDisplay } from './TrustScoreDisplay';
 
 interface Listing {
   id: string;
@@ -443,7 +444,10 @@ export function Dashboard() {
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div className="text-sm text-gray-600">
-                  By {listing.userName}
+                  <div className="space-y-1">
+                    <div>By {listing.userName}</div>
+                    <TrustScoreDisplay userId={listing.userId} size="small" />
+                  </div>
                 </div>
                 {listing.userId !== user?.id && (
                   <button
@@ -571,9 +575,18 @@ export function Dashboard() {
                       <h3 className="font-medium text-gray-900">{request.listing.title}</h3>
                       <p className="text-sm text-gray-600">
                         {request.requesterId === user?.id 
+                    <div className="mt-1">
+                      <TrustScoreDisplay userId={member.id} size="small" />
+                    </div>
                           ? `To ${request.ownerName}` 
                           : `From ${request.requesterName}`}
                       </p>
+                      <div className="mt-1">
+                        <TrustScoreDisplay 
+                          userId={request.requesterId === user?.id ? request.ownerId : request.requesterId} 
+                          size="small" 
+                        />
+                      </div>
                     </div>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
@@ -596,7 +609,7 @@ export function Dashboard() {
                   </div>
                   
                   <div className="flex items-center space-x-2">
-                    {request.ownerId === user?.id && request.status === 'owner_accepted' && (
+                    {request.ownerId === user?.id && request.status === 'pending' && (
                       <>
                         <button
                           onClick={() => handleBarterResponse(request.id, true)}
@@ -615,6 +628,25 @@ export function Dashboard() {
                       </>
                     )}
                     
+                    {request.requesterId === user?.id && request.status === 'owner_accepted' && (
+                      <>
+                        <button
+                          onClick={() => handleBarterResponse(request.id, true)}
+                          className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                        >
+                          <Check size={14} />
+                          <span>Confirm</span>
+                        </button>
+                        <button
+                          onClick={() => handleBarterResponse(request.id, false)}
+                          className="flex items-center space-x-1 bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
+                        >
+                          <XCircle size={14} />
+                          <span>Decline</span>
+                        </button>
+                      </>
+                    )}
+
                     {request.status === 'both_accepted' && request.confirmationCode && (
                       <button
                         onClick={() => handleConfirmBarter(request)}
@@ -622,6 +654,18 @@ export function Dashboard() {
                       >
                         Complete Barter
                       </button>
+                    )}
+
+                    {request.status === 'owner_accepted' && request.requesterId !== user?.id && (
+                      <span className="text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs">
+                        Waiting for requester confirmation...
+                      </span>
+                    )}
+
+                    {request.status === 'pending' && request.ownerId !== user?.id && (
+                      <span className="text-yellow-700 bg-yellow-100 px-2 py-1 rounded text-xs">
+                        Waiting for owner response...
+                      </span>
                     )}
                   </div>
                 </div>
