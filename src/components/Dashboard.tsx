@@ -575,9 +575,6 @@ export function Dashboard() {
                       <h3 className="font-medium text-gray-900">{request.listing.title}</h3>
                       <p className="text-sm text-gray-600">
                         {request.requesterId === user?.id 
-                    <div className="mt-1">
-                      <TrustScoreDisplay userId={member.id} size="small" />
-                    </div>
                           ? `To ${request.ownerName}` 
                           : `From ${request.requesterName}`}
                       </p>
