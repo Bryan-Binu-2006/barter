@@ -69,32 +69,32 @@ class BarterService {
   }
 
   // Get requests made by the user
-  getMyRequests: (userId: string): Promise<BarterRequest[]> => {
-    const requests = LocalStorageManager.get<BarterRequest[]>('barterRequests', []);
+  async getMyRequests(userId: string): Promise<BarterRequest[]> {
+    const requests = LocalStorageManager.getBarterRequests();
     return Promise.resolve(
       requests
         .filter(request => request.requesterId === userId)
         .map(request => ({
           ...request,
-          listingTitle: LocalStorageManager.get<Listing[]>('listings', [])
+          listingTitle: LocalStorageManager.getListings()
             .find(l => l.id === request.listingId)?.title || 'Unknown Listing'
         }))
     );
-  },
+  }
 
   // Get requests for user's listings
-  getRequestsForMyListings: (userId: string): Promise<BarterRequest[]> => {
-    const requests = LocalStorageManager.get<BarterRequest[]>('barterRequests', []);
+  async getRequestsForMyListings(userId: string): Promise<BarterRequest[]> {
+    const requests = LocalStorageManager.getBarterRequests();
     return Promise.resolve(
       requests
         .filter(request => request.ownerId === userId)
         .map(request => ({
           ...request,
-          listingTitle: LocalStorageManager.get<Listing[]>('listings', [])
+          listingTitle: LocalStorageManager.getListings()
             .find(l => l.id === request.listingId)?.title || 'Unknown Listing'
         }))
     );
-  },
+  }
 
   async respondToRequest(requestId: string, accept: boolean): Promise<BarterRequest> {
     // Simulate API delay
