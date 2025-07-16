@@ -31,10 +31,12 @@ class ListingService {
 
   async createListing(data: CreateListingData): Promise<Listing> {
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const currentUser = LocalStorageManager.getCurrentUser();
-    if (!currentUser) throw new Error('Not authenticated');
+    if (!currentUser) {
+      throw new Error('You must be logged in to create a listing');
+    }
 
     const listing = {
       id: this.generateId(),
@@ -51,6 +53,7 @@ class ListingService {
       isActive: true
     };
 
+    console.log('Creating listing:', listing); // Debug log
     LocalStorageManager.addListing(listing);
 
     return listing;

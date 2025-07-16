@@ -456,7 +456,8 @@ export function Dashboard() {
       {showCreateListing && (
         <CreateListing
           onClose={() => setShowCreateListing(false)}
-          onSubmit={handleCreateListing}
+          onSuccess={loadData}
+          communityId={selectedCommunity!.id}
         />
       )}
 

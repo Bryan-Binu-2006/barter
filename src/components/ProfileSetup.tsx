@@ -62,7 +62,9 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
   };
 
   const nextStep = () => {
-    if (currentStep < 3) setCurrentStep(currentStep + 1);
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
   const prevStep = () => {
@@ -71,6 +73,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
 
   const isStep1Valid = formData.fullName.trim() && formData.phone.trim();
   const isStep2Valid = formData.address.trim() && formData.city.trim() && formData.state.trim();
+  const isStep3Valid = true; // Bio is optional, so step 3 is always valid
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -311,7 +314,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                 onClick={nextStep}
                 disabled={
                   (currentStep === 1 && !isStep1Valid) ||
-                  (currentStep === 2 && !isStep2Valid)
+                  (currentStep === 2 && !isStep2Valid) ||
+                  (currentStep === 3 && !isStep3Valid)
                 }
                 className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -320,7 +324,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             ) : (
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isStep1Valid || !isStep2Valid}
                 className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
                 {loading ? (

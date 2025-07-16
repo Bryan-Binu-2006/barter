@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { X, Package, DollarSign, Calendar, FileText } from 'lucide-react';
-import { useCommunity } from '../contexts/CommunityContext';
+import { useAuth } from '../contexts/AuthContext';
 import { listingService } from '../services/listingService';
 
 interface CreateListingProps {
   onClose: () => void;
   onSuccess: () => void;
+  communityId: string;
 }
 
-export function CreateListing({ onClose, onSuccess }: CreateListingProps) {
-  const { selectedCommunity } = useCommunity();
+export function CreateListing({ onClose, onSuccess, communityId }: CreateListingProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -23,7 +24,10 @@ export function CreateListing({ onClose, onSuccess }: CreateListingProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCommunity) return;
+    if (!communityId || !user) {
+      setError('Missing required information');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -31,7 +35,7 @@ export function CreateListing({ onClose, onSuccess }: CreateListingProps) {
     try {
       await listingService.createListing({
         ...formData,
-        communityId: selectedCommunity.id,
+        communityId: communityId,
         estimatedValue: parseFloat(formData.estimatedValue) || 0
       });
       onSuccess();

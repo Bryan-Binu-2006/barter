@@ -91,8 +91,10 @@ export class LocalStorageManager {
 
   static addListing(listing: any) {
     const listings = this.getListings();
+    console.log('Adding listing to storage:', listing); // Debug log
     listings.push(listing);
     this.setListings(listings);
+    console.log('All listings after add:', listings); // Debug log
   }
 
   // Messages management
