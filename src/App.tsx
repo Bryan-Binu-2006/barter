@@ -9,6 +9,7 @@ import { Dashboard } from './components/Dashboard';
 import { useAuth } from './contexts/AuthContext';
 import { useCommunity } from './contexts/CommunityContext';
 import { profileService } from './services/profileService';
+import { LocalStorageManager } from './lib/localStorage';
 
 function AppContent() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -16,22 +17,33 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<'auth' | 'profile' | 'community' | 'dashboard'>('auth');
   const [profileComplete, setProfileComplete] = useState(false);
 
+  // Clear all data on app start for fresh experience
+  useEffect(() => {
+    LocalStorageManager.clearAllAppData();
+  }, []);
+
   useEffect(() => {
     const checkProfileStatus = async () => {
       if (authLoading) return;
       
       if (!isAuthenticated) {
         setCurrentView('auth');
+        setProfileComplete(false);
       } else if (user) {
-        const isComplete = await profileService.isProfileComplete(user.id);
-        setProfileComplete(isComplete);
-        
-        if (!isComplete) {
+        try {
+          const isComplete = await profileService.isProfileComplete(user.id);
+          setProfileComplete(isComplete);
+          
+          if (!isComplete) {
+            setCurrentView('profile');
+          } else if (!selectedCommunity) {
+            setCurrentView('community');
+          } else {
+            setCurrentView('dashboard');
+          }
+        } catch (error) {
+          console.error('Error checking profile status:', error);
           setCurrentView('profile');
-        } else if (!selectedCommunity) {
-          setCurrentView('community');
-        } else {
-          setCurrentView('dashboard');
         }
       }
     };
@@ -43,6 +55,7 @@ function AppContent() {
     setProfileComplete(true);
     setCurrentView('community');
   };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex items-center justify-center">

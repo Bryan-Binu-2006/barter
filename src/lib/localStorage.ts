@@ -1,5 +1,25 @@
-// Local Storage utility functions
+// Local Storage utility functions with data clearing
 export class LocalStorageManager {
+  // Clear all app data on startup for fresh start
+  static clearAllAppData() {
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('users') || 
+          key.startsWith('communities') || 
+          key.startsWith('members_') || 
+          key.startsWith('messages_') || 
+          key.startsWith('notifications_') ||
+          key.startsWith('user_stats_') ||
+          key.startsWith('trust_score_') ||
+          key === 'currentUser' ||
+          key === 'listings' ||
+          key === 'barterRequests' ||
+          key === 'selectedCommunityId') {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+
   private static getItem<T>(key: string, defaultValue: T): T {
     try {
       const item = localStorage.getItem(key);
@@ -118,21 +138,5 @@ export class LocalStorageManager {
     const notifications = this.getNotifications(userId);
     notifications.push(notification);
     this.setNotifications(userId, notifications);
-  }
-
-  // Clear all data
-  static clearAllData() {
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith('communities') || 
-          key.startsWith('members_') || 
-          key.startsWith('messages_') || 
-          key.startsWith('notifications_') ||
-          key === 'currentUser' ||
-          key === 'listings' ||
-          key === 'barterRequests') {
-        localStorage.removeItem(key);
-      }
-    });
   }
 }

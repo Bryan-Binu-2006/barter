@@ -27,9 +27,9 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
     e.preventDefault();
     
     // Validate required fields
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim() || 
+    if (!formData.fullName.trim() || !formData.phone.trim() || !formData.address.trim() || 
         !formData.city.trim() || !formData.state.trim()) {
-      alert('Please fill in all required fields');
+      setError('Please fill in all required fields');
       return;
     }
     
@@ -41,22 +41,24 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
     try {
       await profileService.completeProfile(user.id, formData);
       
-      // Only call onComplete when all steps are truly finished
-      if (currentStep === 2) {
-        setTimeout(() => {
-          onComplete();
-        }, 1000);
-      }
-      onComplete();
+      // Small delay to show completion
+      setTimeout(() => {
+        onComplete();
+      }, 500);
     } catch (err: any) {
+      setError(err.message || 'Failed to complete profile');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
+    if (error) setError('');
   };
 
   const nextStep = () => {
@@ -67,8 +69,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const isStep1Valid = formData.fullName && formData.phone;
-  const isStep2Valid = formData.address && formData.city && formData.state;
+  const isStep1Valid = formData.fullName.trim() && formData.phone.trim();
+  const isStep2Valid = formData.address.trim() && formData.city.trim() && formData.state.trim();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -254,6 +256,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                     rows={4}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
                     placeholder="Tell the community about yourself, your interests, and what you'd like to trade..."
+                    maxLength={500}
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">

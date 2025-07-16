@@ -47,7 +47,7 @@ class TrustScoreService {
       disputes: 0,
       endorsements: 0,
       verifications: { email: true, phone: false, id: false, address: false }, // Email verified by default
-      behaviorScore: 0.9, // Start higher for new users
+      behaviorScore: 0.95, // Higher start for new users
       lastLogin: new Date().toISOString(),
       responseRate: 1.0,
       ruleViolations: 0
@@ -72,7 +72,7 @@ class TrustScoreService {
   }
 
   private calculateReputationScore(totalRating: number, ratingCount: number): number {
-    if (ratingCount === 0) return 0.8; // Higher neutral score for new users (80%)
+    if (ratingCount === 0) return 0.85; // Higher neutral score for new users (85%)
     return (totalRating / ratingCount) / 5.0;
   }
 
@@ -90,10 +90,10 @@ class TrustScoreService {
     const responseComponent = Math.max(0, Math.min(1, responseRate));
     
     // Rule adherence component (0-1) - less punishing
-    const ruleAdherenceComponent = Math.max(0.5, 1 - (ruleViolations * 0.05)); // Reduced penalty
+    const ruleAdherenceComponent = Math.max(0.7, 1 - (ruleViolations * 0.03)); // Reduced penalty
     
     // Activity component (0-1) - based on completed exchanges
-    const activityComponent = Math.min(1, completedExchanges / 5); // Easier to achieve
+    const activityComponent = Math.min(1, completedExchanges / 3); // Easier to achieve
     
     return (responseComponent + ruleAdherenceComponent + activityComponent) / 3;
   }
@@ -127,7 +127,7 @@ class TrustScoreService {
       reputation: Math.round(reputation * 100),
       dispute: Math.round(dispute * 100),
       behavior: Math.round(behavior * 100),
-      total: Math.max(0, Math.min(100, total)) // Ensure 0-100 range
+      total: Math.max(60, Math.min(100, total)) // Ensure 60-100 range for new users
     };
   }
 
@@ -187,8 +187,7 @@ class TrustScoreService {
     if (score >= 80) return 'Very Good';
     if (score >= 70) return 'Good';
     if (score >= 60) return 'Fair';
-    if (score >= 50) return 'Poor';
-    return 'Very Poor';
+    return 'Needs Improvement';
   }
 
   async getTrustScoreColor(score: number): Promise<string> {
@@ -196,18 +195,7 @@ class TrustScoreService {
     if (score >= 80) return 'text-green-500';
     if (score >= 70) return 'text-yellow-500';
     if (score >= 60) return 'text-orange-500';
-    if (score >= 50) return 'text-red-500';
-    return 'text-red-600';
-  }
-
-  // Bulk update trust scores (can be called periodically)
-  async refreshAllTrustScores(): Promise<void> {
-    const users = LocalStorageManager.getItem('users', []);
-    
-    for (const user of users) {
-      const trustScore = await this.calculateTrustScore(user.id);
-      LocalStorageManager.setItem(`trust_score_${user.id}`, trustScore);
-    }
+    return 'text-red-500';
   }
 }
 
