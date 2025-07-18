@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Send, Package, MessageCircle, Check, AlertCircle } from 'lucide-react';
 import { barterService } from '../services/barterService';
-import { BarterRequest } from '../types/barter';
 
 interface BarterRequestModalProps {
   listing: any;
@@ -63,7 +62,6 @@ export function BarterRequestModal({ listing, onClose, onSuccess }: BarterReques
         <div className="p-6">
           {step === 'offer' && (
             <>
-              {/* Listing Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-3 mb-3">
                   <Package size={20} className="text-gray-600" />

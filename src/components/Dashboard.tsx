@@ -5,8 +5,6 @@ import { CreateListing } from './CreateListing';
 import { BarterRequestModal } from './BarterRequestModal';
 import { BarterRequestsModal } from './BarterRequestsModal';
 import { BarterChatModal } from './BarterChatModal';
-import { BarterConfirmationModal } from './BarterConfirmationModal';
-import { RatingModal } from './RatingModal';
 import { TrustScoreDisplay } from './TrustScoreDisplay';
 import { NotificationCenter } from './NotificationCenter';
 import { listingService } from '../services/listingService';
@@ -15,7 +13,7 @@ import { communityService } from '../services/communityService';
 import { Listing } from '../types/listing';
 import { BarterRequest } from '../types/barter';
 import { CommunityMember } from '../types/community';
-import { Plus, Users, MessageSquare, Star, Clock, CheckCircle, XCircle, MessageCircle } from 'lucide-react';
+import { Plus, Users, MessageSquare, Clock, CheckCircle, XCircle, MessageCircle } from 'lucide-react';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -25,8 +23,6 @@ export function Dashboard() {
   const [showBarterRequest, setShowBarterRequest] = useState(false);
   const [showBarterRequests, setShowBarterRequests] = useState(false);
   const [showBarterChat, setShowBarterChat] = useState(false);
-  const [showBarterConfirmation, setShowBarterConfirmation] = useState(false);
-  const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedBarterRequest, setSelectedBarterRequest] = useState<BarterRequest | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
@@ -41,25 +37,20 @@ export function Dashboard() {
   }, [selectedCommunity]);
 
   const loadData = async () => {
-    if (!selectedCommunity) return;
+    if (!selectedCommunity || !user) return;
     
     setLoading(true);
     try {
-      const [listingsData, membersData, requestsData] = await Promise.all([
+      const [listingsData, membersData, myRequests, requestsForMyListings] = await Promise.all([
         listingService.getCommunityListings(selectedCommunity.id),
         communityService.getCommunityMembers(selectedCommunity.id),
-        Promise.all([
-          barterService.getMyRequests(user!.id),
-          barterService.getRequestsForMyListings(user!.id)
-        ]).then(([myRequests, requestsForMyListings]) => [
-          ...myRequests,
-          ...requestsForMyListings
-        ])
+        barterService.getMyRequests(user.id),
+        barterService.getRequestsForMyListings(user.id)
       ]);
       
       setListings(listingsData);
       setMembers(membersData);
-      setBarterRequests(requestsData);
+      setBarterRequests([...myRequests, ...requestsForMyListings]);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -67,18 +58,9 @@ export function Dashboard() {
     }
   };
 
-  const handleCreateListing = async (listingData: any) => {
-    try {
-      await listingService.createListing({
-        ...listingData,
-        userId: user!.id,
-        communityId: selectedCommunity!.id
-      });
-      setShowCreateListing(false);
-      loadData();
-    } catch (error) {
-      console.error('Error creating listing:', error);
-    }
+  const handleCreateListing = async () => {
+    setShowCreateListing(false);
+    loadData();
   };
 
   const handleBarterRequest = (listing: Listing) => {
@@ -86,49 +68,10 @@ export function Dashboard() {
     setShowBarterRequest(true);
   };
 
-  const handleSendBarterRequest = async (requestData: any) => {
-    if (!selectedListing) return;
-    
-    try {
-      await barterService.createBarterRequest({
-        ...requestData,
-        listingId: selectedListing.id,
-        requesterId: user!.id,
-        ownerId: selectedListing.userId
-      });
-      setShowBarterRequest(false);
-      setSelectedListing(null);
-      loadData();
-    } catch (error) {
-      console.error('Error sending barter request:', error);
-    }
-  };
-
-  const handleAcceptRequest = async (requestId: string) => {
-    try {
-      await barterService.acceptBarterRequest(requestId);
-      loadData();
-    } catch (error) {
-      console.error('Error accepting request:', error);
-    }
-  };
-
-  const handleDeclineRequest = async (requestId: string) => {
-    try {
-      await barterService.declineBarterRequest(requestId);
-      loadData();
-    } catch (error) {
-      console.error('Error declining request:', error);
-    }
-  };
-
-  const handleConfirmBarter = async (requestId: string) => {
-    try {
-      await barterService.confirmBarter(requestId);
-      loadData();
-    } catch (error) {
-      console.error('Error confirming barter:', error);
-    }
+  const handleSendBarterRequest = async () => {
+    setShowBarterRequest(false);
+    setSelectedListing(null);
+    loadData();
   };
 
   const handleOpenChat = (request: BarterRequest) => {
@@ -136,38 +79,10 @@ export function Dashboard() {
     setShowBarterChat(true);
   };
 
-  const handleOpenConfirmation = (request: BarterRequest) => {
-    setSelectedBarterRequest(request);
-    setShowBarterConfirmation(true);
-  };
-
-  const handleCompleteBarter = async (requestId: string, confirmationCode: string) => {
-    try {
-      await barterService.completeBarter(requestId, confirmationCode);
-      setShowBarterConfirmation(false);
-      setSelectedBarterRequest(null);
-      loadData();
-    } catch (error) {
-      console.error('Error completing barter:', error);
-    }
-  };
-
-  const handleRateBarter = (request: BarterRequest) => {
-    setSelectedBarterRequest(request);
-    setShowRatingModal(true);
-  };
-
-  const handleSubmitRating = async (rating: number, review: string) => {
-    if (!selectedBarterRequest) return;
-    
-    try {
-      await barterService.rateBarter(selectedBarterRequest.id, rating, review);
-      setShowRatingModal(false);
-      setSelectedBarterRequest(null);
-      loadData();
-    } catch (error) {
-      console.error('Error submitting rating:', error);
-    }
+  const handleCloseChat = () => {
+    setShowBarterChat(false);
+    setSelectedBarterRequest(null);
+    loadData();
   };
 
   const getStatusIcon = (status: string) => {
@@ -180,7 +95,7 @@ export function Dashboard() {
         return <MessageCircle className="w-4 h-4 text-green-500" />;
       case 'completed':
         return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'declined':
+      case 'rejected':
         return <XCircle className="w-4 h-4 text-red-500" />;
       default:
         return <Clock className="w-4 h-4 text-gray-500" />;
@@ -197,7 +112,7 @@ export function Dashboard() {
         return 'Both Accepted';
       case 'completed':
         return 'Completed';
-      case 'declined':
+      case 'rejected':
         return 'Declined';
       default:
         return 'Unknown';
@@ -231,7 +146,6 @@ export function Dashboard() {
 
       <NotificationCenter />
 
-      {/* Tab Navigation */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
@@ -269,7 +183,6 @@ export function Dashboard() {
         </nav>
       </div>
 
-      {/* Listings Tab */}
       {activeTab === 'listings' && (
         <div>
           <div className="flex justify-between items-center mb-6">
@@ -294,13 +207,6 @@ export function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {listings.map((listing) => (
               <div key={listing.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {listing.imageUrl && (
-                  <img
-                    src={listing.imageUrl}
-                    alt={listing.title}
-                    className="w-full h-48 object-cover"
-                  />
-                )}
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">{listing.title}</h3>
@@ -350,7 +256,6 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Members Tab */}
       {activeTab === 'members' && (
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Community Members</h2>
@@ -377,7 +282,6 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Chat Tab */}
       {activeTab === 'chat' && (
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-6">General Chat</h2>
@@ -389,7 +293,6 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Barter Requests Overview */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">My Barter Activity</h2>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -403,7 +306,7 @@ export function Dashboard() {
                   {getStatusIcon(request.status)}
                   <div>
                     <p className="text-sm font-medium text-gray-900">
-                      {request.listingTitle}
+                      {request.listing.title}
                     </p>
                     <p className="text-sm text-gray-600">
                       {request.requesterId === user?.id
@@ -424,22 +327,6 @@ export function Dashboard() {
                       Chat
                     </button>
                   )}
-                  {request.status === 'both_accepted' && (
-                    <button
-                      onClick={() => handleOpenConfirmation(request)}
-                      className="text-green-600 hover:text-green-900 text-sm font-medium"
-                    >
-                      Complete
-                    </button>
-                  )}
-                  {request.status === 'completed' && !request.rated && (
-                    <button
-                      onClick={() => handleRateBarter(request)}
-                      className="text-yellow-600 hover:text-yellow-900 text-sm font-medium"
-                    >
-                      Rate
-                    </button>
-                  )}
                 </div>
               </div>
             ))}
@@ -452,12 +339,11 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Modals */}
       {showCreateListing && (
         <CreateListing
           onClose={() => setShowCreateListing(false)}
-          onSuccess={loadData}
-          communityId={selectedCommunity!.id}
+          onSuccess={handleCreateListing}
+          communityId={selectedCommunity.id}
         />
       )}
 
@@ -468,55 +354,22 @@ export function Dashboard() {
             setShowBarterRequest(false);
             setSelectedListing(null);
           }}
-          onSubmit={handleSendBarterRequest}
+          onSuccess={handleSendBarterRequest}
         />
       )}
 
       {showBarterRequests && (
         <BarterRequestsModal
-          requests={barterRequests}
-          currentUserId={user!.id}
           onClose={() => setShowBarterRequests(false)}
-          onAccept={handleAcceptRequest}
-          onDecline={handleDeclineRequest}
-          onConfirm={handleConfirmBarter}
           onOpenChat={handleOpenChat}
-          onOpenConfirmation={handleOpenConfirmation}
         />
       )}
 
       {showBarterChat && selectedBarterRequest && (
         <BarterChatModal
           request={selectedBarterRequest}
-          currentUserId={user!.id}
-          onClose={() => {
-            setShowBarterChat(false);
-            setSelectedBarterRequest(null);
-          }}
-        />
-      )}
-
-      {showBarterConfirmation && selectedBarterRequest && (
-        <BarterConfirmationModal
-          request={selectedBarterRequest}
-          currentUserId={user!.id}
-          onClose={() => {
-            setShowBarterConfirmation(false);
-            setSelectedBarterRequest(null);
-          }}
-          onComplete={handleCompleteBarter}
-        />
-      )}
-
-      {showRatingModal && selectedBarterRequest && (
-        <RatingModal
-          request={selectedBarterRequest}
-          currentUserId={user!.id}
-          onClose={() => {
-            setShowRatingModal(false);
-            setSelectedBarterRequest(null);
-          }}
-          onSubmit={handleSubmitRating}
+          onClose={handleCloseChat}
+          onComplete={handleCloseChat}
         />
       )}
     </div>

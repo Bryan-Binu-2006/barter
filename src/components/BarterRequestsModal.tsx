@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Package, Clock, Check, XCircle } from 'lucide-react';
+import { X, Package, Clock, Check, XCircle, MessageCircle } from 'lucide-react';
 import { barterService } from '../services/barterService';
-// @ts-ignore
 import { BarterRequest } from '../types/barter';
 import { useAuth } from '../contexts/AuthContext';
 
 interface BarterRequestsModalProps {
   onClose: () => void;
-  onOpenChat: (requestId: string) => void;
+  onOpenChat: (request: BarterRequest) => void;
 }
 
-export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
+export function BarterRequestsModal({ onClose, onOpenChat }: BarterRequestsModalProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
   const [receivedRequests, setReceivedRequests] = useState<BarterRequest[]>([]);
@@ -22,10 +21,12 @@ export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
   }, []);
 
   const loadRequests = async () => {
+    if (!user) return;
+    
     try {
       const [received, sent] = await Promise.all([
-        barterService.getRequestsForMyListings(),
-        barterService.getMyRequests()
+        barterService.getRequestsForMyListings(user.id),
+        barterService.getMyRequests(user.id)
       ]);
       setReceivedRequests(received);
       setSentRequests(sent);
@@ -49,12 +50,14 @@ export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'accepted':
+      case 'owner_accepted':
+        return 'bg-blue-100 text-blue-800';
+      case 'both_accepted':
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -62,7 +65,7 @@ export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
 
   const renderRequest = (request: BarterRequest) => {
     const isOwner = user && request.ownerId === user.id;
-    const isRequester = user && request.requesterId === user.id;
+    
     return (
       <div key={request.id} className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-start justify-between mb-4">
@@ -76,7 +79,7 @@ export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
             </div>
           </div>
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-            {request.status}
+            {request.status.replace('_', ' ')}
           </span>
         </div>
 
@@ -94,7 +97,6 @@ export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
             Est. Value: ${request.listing.estimatedValue}
           </div>
           <div className="flex items-center space-x-2">
-            {/* Owner: Accept/Decline if pending */}
             {isOwner && request.status === 'pending' && (
               <>
                 <button
@@ -113,30 +115,43 @@ export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
                 </button>
               </>
             )}
-            {/* Requester: Status only */}
-            {isRequester && request.status === 'pending' && (
-              <span className="text-yellow-700 bg-yellow-100 px-2 py-1 rounded text-xs">Waiting for owner response...</span>
+            
+            {!isOwner && request.status === 'owner_accepted' && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleRespond(request.id, true)}
+                  className="flex items-center space-x-1 bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                >
+                  <Check size={14} />
+                  <span>Confirm</span>
+                </button>
+                <button
+                  onClick={() => handleRespond(request.id, false)}
+                  className="flex items-center space-x-1 bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
+                >
+                  <XCircle size={14} />
+                  <span>Decline</span>
+                </button>
+              </div>
             )}
-            {/* Accepted: Show confirmation code and transaction info */}
-            {(request.status === 'both_accepted' || request.status === 'completed') && request.confirmationCode && (
-              <span className="text-green-700 bg-green-100 px-2 py-1 rounded text-xs">Accepted! Confirmation Code: <span className="font-mono">{request.confirmationCode}</span></span>
+
+            {request.status === 'both_accepted' && (
+              <button
+                onClick={() => onOpenChat(request)}
+                className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+              >
+                <MessageCircle size={14} />
+                <span>Chat</span>
+              </button>
             )}
-            {/* Rejected: Show rejected status */}
-            {request.status === 'rejected' && (
-              <span className="text-red-700 bg-red-100 px-2 py-1 rounded text-xs">Rejected</span>
+
+            {request.status === 'both_accepted' && request.ownerConfirmationCode && (
+              <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                Code: {isOwner ? request.ownerConfirmationCode : request.requesterConfirmationCode}
+              </div>
             )}
           </div>
         </div>
-
-        {/* Transaction info if accepted */}
-        {(request.status === 'both_accepted' || request.status === 'completed') && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Transaction Complete!</strong><br />
-              Confirmation Code: <span className="font-mono">{request.confirmationCode}</span>
-            </p>
-          </div>
-        )}
       </div>
     );
   };
@@ -144,28 +159,6 @@ export function BarterRequestsModal({ onClose }: BarterRequestsModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-        {/* DEBUG PANEL START */}
-        <div className="p-4 bg-yellow-50 border-b border-yellow-200 text-xs text-yellow-900">
-          <div><strong>DEBUG PANEL</strong></div>
-          <div>Current User: {user ? `${user.name} (${user.id})` : 'None'}</div>
-          <div className="mt-2"><strong>Received Requests:</strong></div>
-          <ul className="mb-2">
-            {receivedRequests.map(r => (
-              <li key={r.id}>
-                id: {r.id}, ownerId: {r.ownerId}, requesterId: {r.requesterId}, status: {r.status}
-              </li>
-            ))}
-          </ul>
-          <div><strong>Sent Requests:</strong></div>
-          <ul>
-            {sentRequests.map(r => (
-              <li key={r.id}>
-                id: {r.id}, ownerId: {r.ownerId}, requesterId: {r.requesterId}, status: {r.status}
-              </li>
-            ))}
-          </ul>
-        </div>
-        {/* DEBUG PANEL END */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Barter Requests</h2>

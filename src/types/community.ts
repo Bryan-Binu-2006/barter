@@ -4,9 +4,9 @@ export interface Community {
   location: string;
   description: string;
   code: string;
-  createdAt: string;
   createdBy: string;
   memberCount: number;
+  createdAt: string;
 }
 
 export interface CreateCommunityData {
@@ -21,5 +21,4 @@ export interface CommunityMember {
   email: string;
   joinedAt: string;
   isAdmin: boolean;
-  isOnline: boolean;
 }

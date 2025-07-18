@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Users, MapPin, Hash, ArrowRight, Home, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Users, MapPin, Hash, ArrowRight, Home } from 'lucide-react';
 import { useCommunity } from '../contexts/CommunityContext';
 
 export function CommunitySelector() {
@@ -12,14 +12,12 @@ export function CommunitySelector() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [debugInfo, setDebugInfo] = useState('');
-  const { createCommunity, joinCommunity, userCommunities, selectCommunity, refreshCommunities } = useCommunity();
+  const { createCommunity, joinCommunity, userCommunities, selectCommunity } = useCommunity();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setDebugInfo('');
 
     try {
       if (activeTab === 'join') {
@@ -27,30 +25,19 @@ export function CommunitySelector() {
           throw new Error('Please enter a community code');
         }
         await joinCommunity(formData.code.trim());
-        setDebugInfo(`Successfully joined community with code: ${formData.code.trim().toUpperCase()}`);
       } else {
         if (!formData.name.trim() || !formData.location.trim() || !formData.description.trim()) {
           throw new Error('Please fill in all fields');
         }
-        const community = await createCommunity({
+        await createCommunity({
           name: formData.name.trim(),
           location: formData.location.trim(),
           description: formData.description.trim()
         });
-        setDebugInfo(`Successfully created community "${community.name}" with code: ${community.code}`);
       }
-      // Reset form
       setFormData({ name: '', location: '', description: '', code: '' });
-      // Refresh communities list
-      await refreshCommunities();
     } catch (err: any) {
-      console.error('Form submission error:', err);
       setError(err.message || 'An error occurred');
-      
-      // Add debug information for join errors
-      if (activeTab === 'join' && formData.code.trim()) {
-        setDebugInfo(`Attempted to join with code: ${formData.code.trim().toUpperCase()}`);
-      }
     } finally {
       setLoading(false);
     }
@@ -61,24 +48,11 @@ export function CommunitySelector() {
       ...prev,
       [e.target.name]: e.target.value
     }));
-    // Clear error when user starts typing
     if (error) setError('');
-    if (debugInfo) setDebugInfo('');
   };
 
   const handleSelectCommunity = (community: any) => {
     selectCommunity(community);
-  };
-
-  const handleRefresh = async () => {
-    setLoading(true);
-    try {
-      await refreshCommunities();
-    } catch (err: any) {
-      setError(err.message || 'Failed to refresh communities');
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -96,28 +70,11 @@ export function CommunitySelector() {
       {userCommunities.length > 0 && (
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 mb-8">
           <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
-                  <Home size={28} />
-                  <span>Your Communities</span>
-                </h2>
-                <p className="text-gray-600 mt-2">Select a community to enter</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                  {userCommunities.length} {userCommunities.length === 1 ? 'community' : 'communities'}
-                </span>
-                <button
-                  onClick={handleRefresh}
-                  disabled={loading}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                  title="Refresh communities"
-                >
-                  <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                </button>
-              </div>
-            </div>
+            <h2 className="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+              <Home size={28} />
+              <span>Your Communities</span>
+            </h2>
+            <p className="text-gray-600 mt-2">Select a community to enter</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -206,18 +163,8 @@ export function CommunitySelector() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
-              <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
-              <div>
-                <p className="text-red-700 text-sm font-medium">Error</p>
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {debugInfo && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <p className="text-blue-700 text-sm">{debugInfo}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-700 text-sm">{error}</p>
             </div>
           )}
 
@@ -240,17 +187,9 @@ export function CommunitySelector() {
                     required
                   />
                 </div>
-                <div className="mt-3 space-y-2">
-                  <p className="text-sm text-gray-500">
-                    Ask a community member for the code to join their group
-                  </p>
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-sm text-amber-800">
-                      <strong>Tip:</strong> Make sure the code is exactly as provided by the community creator. 
-                      Codes are case-insensitive and typically 6 characters long.
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm text-gray-500 mt-3">
+                  Ask a community member for the code to join their group
+                </p>
               </div>
             ) : (
               <>
@@ -331,26 +270,6 @@ export function CommunitySelector() {
               )}
             </button>
           </form>
-
-          {activeTab === 'create' && (
-            <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl">
-              <h4 className="font-medium text-blue-900 mb-3">What happens next?</h4>
-              <ul className="text-sm text-blue-800 space-y-2">
-                <li className="flex items-start space-x-2">
-                  <span className="font-medium">1.</span>
-                  <span>Your community will be created with a unique 6-character code</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <span className="font-medium">2.</span>
-                  <span>Share the code with neighbors to invite them to join</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <span className="font-medium">3.</span>
-                  <span>Start creating listings and trading with your community members</span>
-                </li>
-              </ul>
-            </div>
-          )}
         </div>
       </div>
     </div>

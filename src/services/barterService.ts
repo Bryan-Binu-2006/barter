@@ -11,22 +11,17 @@ class BarterService {
   }
 
   async createBarterRequest(data: CreateBarterRequestData): Promise<BarterRequest> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const currentUser = LocalStorageManager.getCurrentUser();
     if (!currentUser) throw new Error('Not authenticated');
 
-    // Get listing details
-    const listings: any[] = LocalStorageManager.getListings();
-    const listing = Array.isArray(listings) ? listings.find((l: any) => l && l.id === data.listingId) : undefined;
-    if (!listing) {
-      throw new Error('Listing not found');
-    }
+    const listings = LocalStorageManager.getListings();
+    const listing = listings.find((l: any) => l.id === data.listingId);
+    if (!listing) throw new Error('Listing not found');
 
-    // Get owner details
-    const users: any[] = (typeof window !== 'undefined' && window.localStorage.getItem('users')) ? JSON.parse(window.localStorage.getItem('users')!) : [];
-    const owner = Array.isArray(users) ? users.find((u: any) => u && u.id === listing.userId) : undefined;
+    const users = LocalStorageManager.getUsers();
+    const owner = users.find((u: any) => u.id === listing.userId);
 
     const request: BarterRequest = {
       id: this.generateId(),
@@ -45,8 +40,6 @@ class BarterService {
         category: listing.category,
         estimatedValue: listing.estimatedValue
       },
-      ownerAccepted: false,
-      requesterAccepted: false,
       chatMessages: []
     };
 
@@ -68,36 +61,17 @@ class BarterService {
     return request;
   }
 
-  // Get requests made by the user
   async getMyRequests(userId: string): Promise<BarterRequest[]> {
     const requests = LocalStorageManager.getBarterRequests();
-    return Promise.resolve(
-      requests
-        .filter(request => request.requesterId === userId)
-        .map(request => ({
-          ...request,
-          listingTitle: LocalStorageManager.getListings()
-            .find(l => l.id === request.listingId)?.title || 'Unknown Listing'
-        }))
-    );
+    return requests.filter((request: BarterRequest) => request.requesterId === userId);
   }
 
-  // Get requests for user's listings
   async getRequestsForMyListings(userId: string): Promise<BarterRequest[]> {
     const requests = LocalStorageManager.getBarterRequests();
-    return Promise.resolve(
-      requests
-        .filter(request => request.ownerId === userId)
-        .map(request => ({
-          ...request,
-          listingTitle: LocalStorageManager.getListings()
-            .find(l => l.id === request.listingId)?.title || 'Unknown Listing'
-        }))
-    );
+    return requests.filter((request: BarterRequest) => request.ownerId === userId);
   }
 
   async respondToRequest(requestId: string, accept: boolean): Promise<BarterRequest> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const currentUser = LocalStorageManager.getCurrentUser();
@@ -105,36 +79,30 @@ class BarterService {
 
     const requests = LocalStorageManager.getBarterRequests();
     const requestIndex = requests.findIndex((r: BarterRequest) => r.id === requestId);
-    if (requestIndex === -1) {
-      throw new Error('Request not found');
-    }
+    if (requestIndex === -1) throw new Error('Request not found');
 
     const request = requests[requestIndex];
-    let updatedRequest = { ...request };
-    let notification;
-
-    // STEP 1: Owner responds to initial request
+    
     if (currentUser.id === request.ownerId && request.status === 'pending') {
       if (accept) {
-        updatedRequest.ownerAccepted = true;
-        updatedRequest.status = 'owner_accepted';
-        updatedRequest.updatedAt = new Date().toISOString();
+        request.status = 'owner_accepted';
+        request.updatedAt = new Date().toISOString();
         
-        notification = {
+        const notification = {
           id: this.generateId(),
           title: 'Barter Request Accepted!',
           message: `${currentUser.name} accepted your barter request for "${request.listing.title}". Please confirm to proceed!`,
-          type: 'barter_owner_accepted',
+          type: 'barter_accepted',
           relatedId: requestId,
           isRead: false,
           createdAt: new Date().toISOString()
         };
         LocalStorageManager.addNotification(request.requesterId, notification);
       } else {
-        updatedRequest.status = 'rejected';
-        updatedRequest.updatedAt = new Date().toISOString();
+        request.status = 'rejected';
+        request.updatedAt = new Date().toISOString();
         
-        notification = {
+        const notification = {
           id: this.generateId(),
           title: 'Barter Request Declined',
           message: `${currentUser.name} declined your barter request for "${request.listing.title}"`,
@@ -145,67 +113,73 @@ class BarterService {
         };
         LocalStorageManager.addNotification(request.requesterId, notification);
       }
-    }
-    // STEP 2: Requester confirms after owner acceptance
-    else if (currentUser.id === request.requesterId && request.status === 'owner_accepted') {
+    } else if (currentUser.id === request.requesterId && request.status === 'owner_accepted') {
       if (accept) {
-        updatedRequest.requesterAccepted = true;
-        updatedRequest.status = 'both_accepted';
-        // Generate separate confirmation codes for each party
-        updatedRequest.ownerConfirmationCode = this.generateConfirmationCode();
-        updatedRequest.requesterConfirmationCode = this.generateConfirmationCode();
-        updatedRequest.updatedAt = new Date().toISOString();
+        request.status = 'both_accepted';
+        request.ownerConfirmationCode = this.generateConfirmationCode();
+        request.requesterConfirmationCode = this.generateConfirmationCode();
+        request.updatedAt = new Date().toISOString();
         
-        // Notify both parties
         const notificationForOwner = {
           id: this.generateId(),
           title: 'Barter Confirmed - Chat Available!',
-          message: `${currentUser.name} confirmed the barter for "${request.listing.title}". You can now chat privately to arrange the exchange!`,
-          type: 'barter_both_accepted',
-          relatedId: requestId,
-          isRead: false,
-          createdAt: new Date().toISOString()
-        };
-        
-        const notificationForRequester = {
-          id: this.generateId(),
-          title: 'Barter Confirmed - Chat Available!',
-          message: `You confirmed the barter for "${request.listing.title}". You can now chat privately to arrange the exchange!`,
-          type: 'barter_both_accepted',
+          message: `${currentUser.name} confirmed the barter for "${request.listing.title}". You can now chat to arrange the exchange!`,
+          type: 'barter_accepted',
           relatedId: requestId,
           isRead: false,
           createdAt: new Date().toISOString()
         };
         
         LocalStorageManager.addNotification(request.ownerId, notificationForOwner);
-        LocalStorageManager.addNotification(request.requesterId, notificationForRequester);
       } else {
-        updatedRequest.status = 'rejected';
-        updatedRequest.updatedAt = new Date().toISOString();
-        
-        notification = {
-          id: this.generateId(),
-          title: 'Barter Request Declined',
-          message: `${currentUser.name} declined to confirm the barter for "${request.listing.title}"`,
-          type: 'barter_rejected',
-          relatedId: requestId,
-          isRead: false,
-          createdAt: new Date().toISOString()
-        };
-        LocalStorageManager.addNotification(request.ownerId, notification);
+        request.status = 'rejected';
+        request.updatedAt = new Date().toISOString();
       }
     }
-    else {
-      throw new Error('Invalid action for current user or request status');
-    }
 
-    requests[requestIndex] = updatedRequest;
+    requests[requestIndex] = request;
     LocalStorageManager.setBarterRequests(requests);
-    return updatedRequest;
+    return request;
+  }
+
+  async sendChatMessage(requestId: string, content: string): Promise<BarterRequest> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const currentUser = LocalStorageManager.getCurrentUser();
+    if (!currentUser) throw new Error('Not authenticated');
+    
+    const requests = LocalStorageManager.getBarterRequests();
+    const requestIndex = requests.findIndex((r: BarterRequest) => r.id === requestId);
+    if (requestIndex === -1) throw new Error('Request not found');
+    
+    const request = requests[requestIndex];
+    
+    if (request.status !== 'both_accepted' && request.status !== 'completed') {
+      throw new Error('Chat is only available after both parties accept the barter');
+    }
+    
+    if (currentUser.id !== request.ownerId && currentUser.id !== request.requesterId) {
+      throw new Error('You are not authorized to chat in this barter');
+    }
+    
+    const message = {
+      id: this.generateId(),
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      content,
+      timestamp: new Date().toISOString()
+    };
+    
+    if (!request.chatMessages) request.chatMessages = [];
+    request.chatMessages.push(message);
+    
+    requests[requestIndex] = request;
+    LocalStorageManager.setBarterRequests(requests);
+    
+    return request;
   }
 
   async completeBarter(requestId: string, confirmationCode: string): Promise<BarterRequest> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const currentUser = LocalStorageManager.getCurrentUser();
@@ -213,14 +187,10 @@ class BarterService {
 
     const requests = LocalStorageManager.getBarterRequests();
     const requestIndex = requests.findIndex((r: BarterRequest) => r.id === requestId);
-
-    if (requestIndex === -1) {
-      throw new Error('Request not found');
-    }
+    if (requestIndex === -1) throw new Error('Request not found');
 
     const request = requests[requestIndex];
     
-    // Check if the confirmation code matches the user's specific code
     const isOwner = request.ownerId === currentUser.id;
     const isRequester = request.requesterId === currentUser.id;
     
@@ -234,14 +204,12 @@ class BarterService {
       throw new Error('Invalid confirmation code');
     }
 
-    // Mark this user as having completed their part
     if (isOwner) {
       request.ownerCompleted = true;
     } else {
       request.requesterCompleted = true;
     }
 
-    // If both parties have completed, mark the entire barter as completed
     if (request.ownerCompleted && request.requesterCompleted) {
       request.status = 'completed';
       request.completedAt = new Date().toISOString();
@@ -254,80 +222,21 @@ class BarterService {
         LocalStorageManager.setListings(listings);
       }
 
-      // Update trust scores for both users
-      await this.updateTrustScoresAfterCompletion(request.ownerId, request.requesterId);
+      // Update trust scores
+      const ownerStats = LocalStorageManager.getUserStats(request.ownerId);
+      const requesterStats = LocalStorageManager.getUserStats(request.requesterId);
+      
+      ownerStats.completedExchanges++;
+      requesterStats.completedExchanges++;
+      
+      LocalStorageManager.setUserStats(request.ownerId, ownerStats);
+      LocalStorageManager.setUserStats(request.requesterId, requesterStats);
     }
 
     requests[requestIndex] = request;
     LocalStorageManager.setBarterRequests(requests);
 
-    return requests[requestIndex];
-  }
-
-  private async updateTrustScoresAfterCompletion(ownerId: string, requesterId: string): Promise<void> {
-    // This will be called after successful barter completion
-    // For now, we'll just increment completed exchanges count
-    const ownerStats = LocalStorageManager.getItem(`user_stats_${ownerId}`, {
-      completedExchanges: 0,
-      totalRating: 0,
-      ratingCount: 0,
-      disputes: 0,
-      endorsements: 0,
-      verifications: { email: false, phone: false, id: false, address: false },
-      behaviorScore: 0.8
-    });
-    
-    const requesterStats = LocalStorageManager.getItem(`user_stats_${requesterId}`, {
-      completedExchanges: 0,
-      totalRating: 0,
-      ratingCount: 0,
-      disputes: 0,
-      endorsements: 0,
-      verifications: { email: false, phone: false, id: false, address: false },
-      behaviorScore: 0.8
-    });
-
-    ownerStats.completedExchanges++;
-    requesterStats.completedExchanges++;
-
-    LocalStorageManager.setItem(`user_stats_${ownerId}`, ownerStats);
-    LocalStorageManager.setItem(`user_stats_${requesterId}`, requesterStats);
-  }
-
-  async sendBarterChatMessage(requestId: string, content: string): Promise<BarterRequest> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    const currentUser = LocalStorageManager.getCurrentUser();
-    if (!currentUser) throw new Error('Not authenticated');
-    
-    const requests = LocalStorageManager.getBarterRequests();
-    const requestIndex = requests.findIndex((r: BarterRequest) => r.id === requestId);
-    if (requestIndex === -1) throw new Error('Request not found');
-    
-    const request = requests[requestIndex];
-    
-    // Only allow chat if both parties have accepted
-    if (request.status !== 'both_accepted' && request.status !== 'completed') {
-      throw new Error('Chat is only available after both parties accept the barter');
-    }
-    
-    // Only allow the owner and requester to chat
-    if (currentUser.id !== request.ownerId && currentUser.id !== request.requesterId) {
-      throw new Error('You are not authorized to chat in this barter');
-    }
-    
-    const message = {
-      id: this.generateId(),
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      content,
-      timestamp: new Date().toISOString()
-    };
-    
-    requests[requestIndex].chatMessages = requests[requestIndex].chatMessages || [];
-    requests[requestIndex].chatMessages.push(message);
-    LocalStorageManager.setBarterRequests(requests);
-    
-    return requests[requestIndex];
+    return request;
   }
 }
 

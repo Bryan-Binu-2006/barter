@@ -7,19 +7,15 @@ class ListingService {
   }
 
   async getCommunityListings(communityId: string): Promise<Listing[]> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 200));
 
     const listings = LocalStorageManager.getListings();
+    const users = LocalStorageManager.getUsers();
     
-    // Filter listings for this community and add user names
     const communityListings = listings
       .filter((listing: any) => listing.communityId === communityId && listing.isActive)
       .map((listing: any) => {
-        // Get user name from users
-        const users = LocalStorageManager.getItem('users', []);
         const user = users.find((u: any) => u.id === listing.userId);
-        
         return {
           ...listing,
           userName: user ? user.name : 'Unknown User'
@@ -30,8 +26,7 @@ class ListingService {
   }
 
   async createListing(data: CreateListingData): Promise<Listing> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     const currentUser = LocalStorageManager.getCurrentUser();
     if (!currentUser) {
@@ -49,50 +44,12 @@ class ListingService {
       userId: currentUser.id,
       userName: currentUser.name,
       communityId: data.communityId,
-      createdAt: new Date().toISOString(),
-      isActive: true
+      isActive: true,
+      createdAt: new Date().toISOString()
     };
 
-    console.log('Creating listing:', listing); // Debug log
     LocalStorageManager.addListing(listing);
-
     return listing;
-  }
-
-  async updateListing(id: string, data: Partial<CreateListingData>): Promise<Listing> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const listings = LocalStorageManager.getListings();
-    const listingIndex = listings.findIndex((l: any) => l.id === id);
-
-    if (listingIndex === -1) {
-      throw new Error('Listing not found');
-    }
-
-    const updatedListing = {
-      ...listings[listingIndex],
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-
-    listings[listingIndex] = updatedListing;
-    LocalStorageManager.setListings(listings);
-
-    return updatedListing;
-  }
-
-  async deleteListing(id: string): Promise<void> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    const listings = LocalStorageManager.getListings();
-    const listingIndex = listings.findIndex((l: any) => l.id === id);
-
-    if (listingIndex !== -1) {
-      listings[listingIndex].isActive = false;
-      LocalStorageManager.setListings(listings);
-    }
   }
 }
 

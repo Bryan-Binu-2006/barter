@@ -2,6 +2,14 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  fullName?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  bio?: string;
+  isProfileComplete: boolean;
   createdAt: string;
 }
 

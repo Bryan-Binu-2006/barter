@@ -1,20 +1,9 @@
-// Local Storage utility functions with data clearing
 export class LocalStorageManager {
   // Clear all app data on startup for fresh start
   static clearAllAppData() {
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
-      if (key.startsWith('users') || 
-          key.startsWith('communities') || 
-          key.startsWith('members_') || 
-          key.startsWith('messages_') || 
-          key.startsWith('notifications_') ||
-          key.startsWith('user_stats_') ||
-          key.startsWith('trust_score_') ||
-          key === 'currentUser' ||
-          key === 'listings' ||
-          key === 'barterRequests' ||
-          key === 'selectedCommunityId') {
+      if (key.startsWith('baarter_')) {
         localStorage.removeItem(key);
       }
     });
@@ -22,7 +11,7 @@ export class LocalStorageManager {
 
   private static getItem<T>(key: string, defaultValue: T): T {
     try {
-      const item = localStorage.getItem(key);
+      const item = localStorage.getItem(`baarter_${key}`);
       return item ? JSON.parse(item) : defaultValue;
     } catch {
       return defaultValue;
@@ -31,7 +20,7 @@ export class LocalStorageManager {
 
   private static setItem<T>(key: string, value: T): void {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      localStorage.setItem(`baarter_${key}`, JSON.stringify(value));
     } catch (error) {
       console.error('Failed to save to localStorage:', error);
     }
@@ -47,7 +36,21 @@ export class LocalStorageManager {
   }
 
   static clearCurrentUser() {
-    localStorage.removeItem('currentUser');
+    localStorage.removeItem('baarter_currentUser');
+  }
+
+  static getUsers() {
+    return this.getItem('users', []);
+  }
+
+  static setUsers(users: any[]) {
+    this.setItem('users', users);
+  }
+
+  static addUser(user: any) {
+    const users = this.getUsers();
+    users.push(user);
+    this.setUsers(users);
   }
 
   // Communities management
@@ -91,25 +94,8 @@ export class LocalStorageManager {
 
   static addListing(listing: any) {
     const listings = this.getListings();
-    console.log('Adding listing to storage:', listing); // Debug log
     listings.push(listing);
     this.setListings(listings);
-    console.log('All listings after add:', listings); // Debug log
-  }
-
-  // Messages management
-  static getMessages(communityId: string) {
-    return this.getItem(`messages_${communityId}`, []);
-  }
-
-  static setMessages(communityId: string, messages: any[]) {
-    this.setItem(`messages_${communityId}`, messages);
-  }
-
-  static addMessage(communityId: string, message: any) {
-    const messages = this.getMessages(communityId);
-    messages.push(message);
-    this.setMessages(communityId, messages);
   }
 
   // Barter requests
@@ -140,5 +126,24 @@ export class LocalStorageManager {
     const notifications = this.getNotifications(userId);
     notifications.push(notification);
     this.setNotifications(userId, notifications);
+  }
+
+  // Trust scores
+  static getUserStats(userId: string) {
+    return this.getItem(`user_stats_${userId}`, {
+      completedExchanges: 0,
+      totalRating: 0,
+      ratingCount: 0,
+      disputes: 0,
+      endorsements: 0,
+      verifications: { email: true, phone: false, id: false, address: false },
+      responseRate: 1.0,
+      ruleViolations: 0,
+      lastLogin: new Date().toISOString()
+    });
+  }
+
+  static setUserStats(userId: string, stats: any) {
+    this.setItem(`user_stats_${userId}`, stats);
   }
 }

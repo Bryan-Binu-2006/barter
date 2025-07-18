@@ -7,13 +7,9 @@ class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Get all users from localStorage
-    const users = LocalStorageManager.getItem('users', []);
-    
-    // Find user by email and password
+    const users = LocalStorageManager.getUsers();
     const user = users.find((u: any) => 
       u.email === credentials.email && u.password === credentials.password
     );
@@ -22,15 +18,8 @@ class AuthService {
       throw new Error('Invalid email or password');
     }
 
-    // Remove password from response
     const { password, ...userWithoutPassword } = user;
-
-    const authUser: User = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      createdAt: user.createdAt
-    };
+    const authUser: User = userWithoutPassword;
 
     LocalStorageManager.setCurrentUser(authUser);
 
@@ -41,40 +30,28 @@ class AuthService {
   }
 
   async signup(credentials: SignupCredentials): Promise<AuthResponse> {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Get all users from localStorage
-    const users = LocalStorageManager.getItem('users', []);
-    
-    // Check if user already exists
+    const users = LocalStorageManager.getUsers();
     const existingUser = users.find((u: any) => u.email === credentials.email);
+    
     if (existingUser) {
       throw new Error('User with this email already exists');
     }
 
-    // Create new user
     const newUser = {
       id: this.generateId(),
       email: credentials.email,
       name: credentials.name,
-      password: credentials.password, // In real app, this would be hashed
+      password: credentials.password,
+      isProfileComplete: false,
       createdAt: new Date().toISOString()
     };
 
-    // Add to users array
-    users.push(newUser);
-    LocalStorageManager.setItem('users', users);
+    LocalStorageManager.addUser(newUser);
 
-    // Remove password from response
     const { password, ...userWithoutPassword } = newUser;
-
-    const authUser: User = {
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      createdAt: newUser.createdAt
-    };
+    const authUser: User = userWithoutPassword;
 
     LocalStorageManager.setCurrentUser(authUser);
 
@@ -82,14 +59,6 @@ class AuthService {
       user: authUser,
       token: 'mock-token-' + newUser.id
     };
-  }
-
-  async verifyToken(token: string): Promise<User> {
-    const currentUser = LocalStorageManager.getCurrentUser();
-    if (!currentUser || !token.includes(currentUser.id)) {
-      throw new Error('Invalid token');
-    }
-    return currentUser;
   }
 
   async getCurrentUser(): Promise<User | null> {

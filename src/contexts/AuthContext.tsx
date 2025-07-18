@@ -1,23 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '../services/authService';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: string;
-}
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-interface SignupCredentials {
-  email: string;
-  password: string;
-  name: string;
-}
+import { User, LoginCredentials, SignupCredentials } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;

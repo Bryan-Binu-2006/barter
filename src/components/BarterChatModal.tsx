@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, MessageCircle, Package, User, Check } from 'lucide-react';
+import { X, Send, MessageCircle, Package, Check } from 'lucide-react';
 import { barterService } from '../services/barterService';
 import { BarterRequest } from '../types/barter';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,7 +33,7 @@ export function BarterChatModal({ request, onClose, onComplete }: BarterChatModa
 
     setLoading(true);
     try {
-      const updatedRequest = await barterService.sendBarterChatMessage(request.id, newMessage.trim());
+      const updatedRequest = await barterService.sendChatMessage(request.id, newMessage.trim());
       setMessages(updatedRequest.chatMessages || []);
       setNewMessage('');
     } catch (error) {
@@ -66,7 +66,6 @@ export function BarterChatModal({ request, onClose, onComplete }: BarterChatModa
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full h-[80vh] flex flex-col">
-        {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -87,7 +86,6 @@ export function BarterChatModal({ request, onClose, onComplete }: BarterChatModa
           </div>
         </div>
 
-        {/* Barter Info */}
         <div className="p-4 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <Package size={20} className="text-gray-600" />
@@ -105,7 +103,6 @@ export function BarterChatModal({ request, onClose, onComplete }: BarterChatModa
           </div>
         </div>
 
-        {/* Confirmation Code Display */}
         <div className="p-4 bg-emerald-50 border-b border-emerald-200">
           <div className="flex items-center justify-between">
             <div>
@@ -126,7 +123,6 @@ export function BarterChatModal({ request, onClose, onComplete }: BarterChatModa
           </p>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-8">
@@ -165,7 +161,6 @@ export function BarterChatModal({ request, onClose, onComplete }: BarterChatModa
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Message Input */}
         <form onSubmit={sendMessage} className="p-4 border-t border-gray-200">
           <div className="flex space-x-2">
             <input
@@ -186,7 +181,6 @@ export function BarterChatModal({ request, onClose, onComplete }: BarterChatModa
           </div>
         </form>
 
-        {/* Completion Modal */}
         {showConfirmation && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">

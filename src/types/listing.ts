@@ -9,8 +9,8 @@ export interface Listing {
   userId: string;
   userName: string;
   communityId: string;
-  createdAt: string;
   isActive: boolean;
+  createdAt: string;
 }
 
 export interface CreateListingData {

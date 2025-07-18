@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Check, MessageCircle, Package, AlertCircle } from 'lucide-react';
-import { notificationService, Notification } from '../services/notificationService';
+import { notificationService } from '../services/notificationService';
+import { Notification } from '../types/barter';
 import { useAuth } from '../contexts/AuthContext';
 
 interface NotificationCenterProps {
@@ -12,12 +13,26 @@ export function NotificationCenter({ onClose }: NotificationCenterProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) {
       loadNotifications();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (onClose) {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+          onClose();
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [onClose]);
 
   const loadNotifications = async () => {
     try {
@@ -57,8 +72,7 @@ export function NotificationCenter({ onClose }: NotificationCenterProps) {
     switch (type) {
       case 'barter_request':
         return <Package className="text-blue-600" size={20} />;
-      case 'barter_owner_accepted':
-      case 'barter_both_accepted':
+      case 'barter_accepted':
         return <Check className="text-green-600" size={20} />;
       case 'barter_rejected':
         return <X className="text-red-600" size={20} />;
@@ -70,10 +84,9 @@ export function NotificationCenter({ onClose }: NotificationCenterProps) {
   };
 
   if (onClose) {
-    // Modal version
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+        <div ref={modalRef} className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
           <div className="p-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -161,7 +174,6 @@ export function NotificationCenter({ onClose }: NotificationCenterProps) {
     );
   }
 
-  // Inline version (for dashboard)
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex items-center justify-between mb-4">

@@ -50,7 +50,6 @@ export function AuthForm() {
       ...prev,
       [e.target.name]: e.target.value
     }));
-    // Clear specific field errors when user starts typing
     if (errors[e.target.name]) {
       setErrors(prev => ({ ...prev, [e.target.name]: '' }));
     }
@@ -204,14 +203,6 @@ export function AuthForm() {
             </button>
           </p>
         </div>
-
-        {!isLogin && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Getting started:</strong> After creating your account, you'll be able to join existing communities or create your own to start bartering with neighbors.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

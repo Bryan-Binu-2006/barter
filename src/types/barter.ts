@@ -1,3 +1,11 @@
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  timestamp: string;
+}
+
 export interface BarterRequest {
   id: string;
   listingId: string;
@@ -6,14 +14,12 @@ export interface BarterRequest {
   ownerId: string;
   ownerName: string;
   offerDescription: string;
-  status: 'pending' | 'owner_accepted' | 'both_accepted' | 'rejected' | 'completed' | 'negotiating';
+  status: 'pending' | 'owner_accepted' | 'both_accepted' | 'rejected' | 'completed';
   ownerConfirmationCode?: string;
   requesterConfirmationCode?: string;
   ownerCompleted?: boolean;
   requesterCompleted?: boolean;
-  createdAt: string;
-  updatedAt?: string;
-  completedAt?: string;
+  chatMessages?: ChatMessage[];
   listing: {
     id: string;
     title: string;
@@ -21,18 +27,23 @@ export interface BarterRequest {
     category: string;
     estimatedValue: number;
   };
-  ownerAccepted?: boolean;
-  requesterAccepted?: boolean;
-  chatMessages?: Array<{
-    id: string;
-    senderId: string;
-    senderName: string;
-    content: string;
-    timestamp: string;
-  }>;
+  createdAt: string;
+  updatedAt?: string;
+  completedAt?: string;
 }
 
 export interface CreateBarterRequestData {
   listingId: string;
   offerDescription: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'barter_request' | 'barter_accepted' | 'barter_rejected' | 'chat_message' | 'system';
+  relatedId?: string;
+  isRead: boolean;
+  createdAt: string;
 }

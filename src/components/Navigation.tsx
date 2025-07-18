@@ -4,21 +4,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCommunity } from '../contexts/CommunityContext';
 import { notificationService } from '../services/notificationService';
 import { NotificationCenter } from './NotificationCenter';
-import { BarterRequestsModal } from './BarterRequestsModal';
-import { ProfileModal } from './ProfileModal';
 
 export function Navigation() {
   const { user, logout } = useAuth();
   const { selectedCommunity, selectCommunity } = useCommunity();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showRequests, setShowRequests] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (user) {
       loadUnreadCount();
-      // Set up interval to check for new notifications
       const interval = setInterval(loadUnreadCount, 5000);
       return () => clearInterval(interval);
     }
@@ -76,7 +71,6 @@ export function Navigation() {
             <div className="flex items-center space-x-4">
               {user && (
                 <>
-                  {/* Notifications */}
                   <button
                     onClick={() => setShowNotifications(true)}
                     className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors"
@@ -90,16 +84,6 @@ export function Navigation() {
                     )}
                   </button>
 
-                  {/* Profile Button */}
-                  <button
-                    onClick={() => setShowProfile(true)}
-                    className="p-2 text-gray-600 hover:text-emerald-600 transition-colors"
-                    title="Edit Profile"
-                  >
-                    <User size={20} />
-                  </button>
-
-                  {/* User Info */}
                   <div className="hidden md:flex items-center space-x-2">
                     <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                       <span className="text-emerald-600 font-medium text-sm">
@@ -125,20 +109,8 @@ export function Navigation() {
         </div>
       </nav>
 
-      {/* Modals */}
       {showNotifications && (
         <NotificationCenter onClose={() => setShowNotifications(false)} />
-      )}
-
-      {showRequests && (
-        <BarterRequestsModal
-          onClose={() => setShowRequests(false)}
-          onOpenChat={() => {}} // Removed chat functionality
-        />
-      )}
-
-      {showProfile && (
-        <ProfileModal onClose={() => setShowProfile(false)} />
       )}
     </>
   );

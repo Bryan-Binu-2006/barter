@@ -1,23 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { communityService } from '../services/communityService';
 import { useAuth } from './AuthContext';
-
-interface Community {
-  id: string;
-  name: string;
-  location: string;
-  description: string;
-  code: string;
-  createdAt: string;
-  createdBy: string;
-  memberCount: number;
-}
-
-interface CreateCommunityData {
-  name: string;
-  location: string;
-  description: string;
-}
+import { Community, CreateCommunityData } from '../types/community';
 
 interface CommunityContextType {
   selectedCommunity: Community | null;
@@ -76,22 +60,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   const selectCommunity = (community: Community | null) => {
     setSelectedCommunity(community);
-    if (community) {
-      localStorage.setItem('selectedCommunityId', community.id);
-    } else {
-      localStorage.removeItem('selectedCommunityId');
-    }
   };
-
-  useEffect(() => {
-    const savedCommunityId = localStorage.getItem('selectedCommunityId');
-    if (savedCommunityId && userCommunities.length > 0) {
-      const savedCommunity = userCommunities.find(c => c.id === savedCommunityId);
-      if (savedCommunity) {
-        setSelectedCommunity(savedCommunity);
-      }
-    }
-  }, [userCommunities]);
 
   return (
     <CommunityContext.Provider value={{

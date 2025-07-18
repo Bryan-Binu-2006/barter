@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, MapPin, Phone, Mail, FileText, Camera, Check } from 'lucide-react';
+import { User, MapPin, Phone, Mail, FileText, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { profileService } from '../services/profileService';
 
@@ -9,6 +9,7 @@ interface ProfileSetupProps {
 
 export function ProfileSetup({ onComplete }: ProfileSetupProps) {
   const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
     phone: '',
@@ -16,22 +17,13 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
     city: '',
     state: '',
     zipCode: '',
-    bio: '',
-    profilePicture: ''
+    bio: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [currentStep, setCurrentStep] = useState(1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate required fields
-    if (!formData.fullName.trim() || !formData.phone.trim() || !formData.address.trim() || 
-        !formData.city.trim() || !formData.state.trim()) {
-      setError('Please fill in all required fields');
-      return;
-    }
     
     if (!user) return;
 
@@ -40,11 +32,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
 
     try {
       await profileService.completeProfile(user.id, formData);
-      
-      // Small delay to show completion
-      setTimeout(() => {
-        onComplete();
-      }, 500);
+      onComplete();
     } catch (err: any) {
       setError(err.message || 'Failed to complete profile');
     } finally {
@@ -68,12 +56,13 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
   };
 
   const prevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   const isStep1Valid = formData.fullName.trim() && formData.phone.trim();
   const isStep2Valid = formData.address.trim() && formData.city.trim() && formData.state.trim();
-  const isStep3Valid = true; // Bio is optional, so step 3 is always valid
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -241,14 +230,14 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             </div>
           )}
 
-          {/* Step 3: Bio and Profile Picture */}
+          {/* Step 3: Bio */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Tell Us About Yourself</h2>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bio
+                  Bio (Optional)
                 </label>
                 <div className="relative">
                   <FileText className="absolute left-3 top-3 text-gray-400" size={20} />
@@ -256,7 +245,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                     name="bio"
                     value={formData.bio}
                     onChange={handleChange}
-                    rows={4}
+                    rows={6}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
                     placeholder="Tell the community about yourself, your interests, and what you'd like to trade..."
                     maxLength={500}
@@ -265,23 +254,6 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                 <p className="text-xs text-gray-500 mt-1">
                   {formData.bio.length}/500 characters
                 </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Profile Picture URL (Optional)
-                </label>
-                <div className="relative">
-                  <Camera className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="url"
-                    name="profilePicture"
-                    value={formData.profilePicture}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    placeholder="Enter profile picture URL"
-                  />
-                </div>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -314,8 +286,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                 onClick={nextStep}
                 disabled={
                   (currentStep === 1 && !isStep1Valid) ||
-                  (currentStep === 2 && !isStep2Valid) ||
-                  (currentStep === 3 && !isStep3Valid)
+                  (currentStep === 2 && !isStep2Valid)
                 }
                 className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
